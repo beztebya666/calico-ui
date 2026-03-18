@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calico-ui
+  namespace: calico-system
+  labels:
+    app: calico-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calico-ui
+  template:
+    metadata:
+      labels:
+        app: calico-ui
+    spec:
+      serviceAccountName: calico-ui
+      containers:
+        - name: calico-ui
+          image: calico-ui:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: GOLDMANE_ADDRESS
+              value: "goldmane.calico-system.svc.cluster.local:7443"
+            - name: TLS_CERT_PATH
+              value: "/certs/tls.crt"
+            - name: TLS_KEY_PATH
+              value: "/certs/tls.key"
+            - name: TLS_CA_PATH
+              value: "/ca-bundle/ca.crt"
+            - name: FLOW_CACHE_RETENTION_MINUTES
+              value: "120"
+            - name: MAX_WS_CONNECTIONS
+              value: "64"
+            - name: AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: calico-ui-auth
+                  key: username
+                  optional: true
+            - name: AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: calico-ui-auth
+                  key: password
+                  optional: true
+            - name: AUTH_DEFAULT_USERNAME
+              value: "admin"
+            - name: AUTH_DEFAULT_PASSWORD
+              value: "admin"
+            - name: AUTH_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: calico-ui-auth
+                  key: sessionSecret
+                  optional: true
+            - name: AUTH_ALLOWED_NAMESPACES
+              valueFrom:
+                secretKeyRef:
+                  name: calico-ui-auth
+                  key: allowedNamespaces
+                  optional: true
+            - name: AUTH_SESSION_TTL_HOURS
+              valueFrom:
+                secretKeyRef:
+                  name: calico-ui-auth
+                  key: sessionTtlHours
+                  optional: true
+            - name: ALLOWED_ORIGINS
+              valueFrom:
+                secretKeyRef:
+                  name: calico-ui-auth
+                  key: allowedOrigins
+                  optional: true
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+              readOnly: true
+            - name: ca-bundle
+              mountPath: /ca-bundle
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/v1/ready
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      volumes:
+        - name: certs
+          secret:
+            secretName: whisker-backend-key-pair
+        - name: ca-bundle
+          configMap:
+            name: whisker-ca-bundle

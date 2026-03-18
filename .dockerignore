@@ -1,0 +1,14 @@
+.git
+.claude
+bin
+cmd/server/dist
+frontend/dist
+frontend/node_modules
+*.md
+calico-ui
+Building
+Checking
+Creating
+Done!
+Installing
+npx

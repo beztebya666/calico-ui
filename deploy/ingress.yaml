@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: calico-ui
+  namespace: calico-system
+  annotations:
+    nginx.ingress.kubernetes.io/websocket-services: calico-ui
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /calico-ui
+            pathType: Prefix
+            backend:
+              service:
+                name: calico-ui
+                port:
+                  number: 8080

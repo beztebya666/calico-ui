@@ -1,0 +1,260 @@
+syntax = "proto3";
+
+package goldmane;
+
+option go_package = "calico-ui/proto";
+
+service Flows {
+  rpc List(FlowListRequest) returns (FlowListResult);
+  rpc Stream(FlowStreamRequest) returns (stream FlowResult);
+  rpc FilterHints(FilterHintsRequest) returns (FilterHintsResult);
+}
+
+message FlowListRequest {
+  int64 start_time_gte = 1;
+  int64 start_time_lt = 2;
+  int64 page = 3;
+  int64 page_size = 4;
+  repeated SortOption sort_by = 5;
+  Filter filter = 6;
+  int64 aggregation_interval = 7;
+}
+
+message FlowListResult {
+  ListMetadata meta = 1;
+  repeated FlowResult flows = 2;
+}
+
+message FlowStreamRequest {
+  int64 start_time_gte = 1;
+  Filter filter = 2;
+  int64 aggregation_interval = 3;
+}
+
+message FilterHintsRequest {
+  FilterType type = 1;
+  Filter filter = 2;
+  int64 start_time_gte = 3;
+  int64 start_time_lt = 4;
+  int64 page = 5;
+  int64 page_size = 6;
+}
+
+message FilterHintsResult {
+  ListMetadata meta = 1;
+  repeated FilterHint hints = 2;
+}
+
+message ListMetadata {
+  int64 totalPages = 1;
+  int64 totalResults = 2;
+}
+
+message FilterHint {
+  string value = 1;
+}
+
+enum FilterType {
+  FilterTypeUnspecified = 0;
+  FilterTypeDestName = 1;
+  FilterTypeSourceName = 2;
+  FilterTypeDestNamespace = 3;
+  FilterTypeSourceNamespace = 4;
+  FilterTypePolicyTier = 5;
+  FilterTypePolicyName = 6;
+  FilterTypePolicyKind = 7;
+  FilterTypePolicyNamespace = 8;
+}
+
+message FlowResult {
+  int64 id = 1;
+  Flow flow = 2;
+}
+
+enum Action {
+  ActionUnspecified = 0;
+  Allow = 1;
+  Deny = 2;
+  Pass = 3;
+}
+
+message Filter {
+  repeated StringMatch source_names = 1;
+  repeated StringMatch source_namespaces = 2;
+  repeated StringMatch dest_names = 3;
+  repeated StringMatch dest_namespaces = 4;
+  repeated StringMatch protocols = 5;
+  repeated PortMatch dest_ports = 6;
+  repeated Action actions = 7;
+  repeated PolicyMatch policies = 8;
+  Reporter reporter = 9;
+  repeated Action pending_actions = 10;
+}
+
+enum MatchType {
+  Exact = 0;
+  Fuzzy = 1;
+}
+
+message StringMatch {
+  string value = 1;
+  MatchType type = 2;
+}
+
+message PortMatch {
+  int64 port = 1;
+}
+
+message SortOption {
+  SortBy sort_by = 1;
+}
+
+message PolicyMatch {
+  PolicyKind kind = 1;
+  StringMatch tier = 2;
+  StringMatch namespace = 3;
+  StringMatch name = 4;
+  Action action = 5;
+}
+
+enum PolicyKind {
+  KindUnspecified = 0;
+  CalicoNetworkPolicy = 1;
+  GlobalNetworkPolicy = 2;
+  StagedNetworkPolicy = 3;
+  StagedGlobalNetworkPolicy = 4;
+  StagedKubernetesNetworkPolicy = 5;
+  NetworkPolicy = 6;
+  reserved 7;
+  reserved 8;
+  ClusterNetworkPolicy = 11;
+  Profile = 9;
+  EndOfTier = 10;
+}
+
+enum SortBy {
+  Time = 0;
+  DestName = 1;
+  DestNamespace = 2;
+  DestType = 3;
+  SourceName = 4;
+  SourceNamespace = 5;
+  SourceType = 6;
+}
+
+service FlowCollector {
+  rpc Connect(stream FlowUpdate) returns (stream FlowReceipt);
+}
+
+message FlowReceipt {}
+
+message FlowUpdate {
+  Flow flow = 1;
+}
+
+enum EndpointType {
+  EndpointTypeUnspecified = 0;
+  WorkloadEndpoint = 1;
+  HostEndpoint = 2;
+  NetworkSet = 3;
+  Network = 4;
+}
+
+enum Reporter {
+  ReporterUnspecified = 0;
+  Src = 1;
+  Dst = 2;
+}
+
+message FlowKey {
+  string source_name = 1;
+  string source_namespace = 2;
+  EndpointType source_type = 3;
+  string dest_name = 4;
+  string dest_namespace = 5;
+  EndpointType dest_type = 6;
+  int64 dest_port = 7;
+  string dest_service_name = 8;
+  string dest_service_namespace = 9;
+  string dest_service_port_name = 10;
+  int64 dest_service_port = 11;
+  string proto = 12;
+  Reporter reporter = 13;
+  Action action = 14;
+  PolicyTrace policies = 15;
+}
+
+message Flow {
+  FlowKey Key = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  repeated string source_labels = 4;
+  repeated string dest_labels = 5;
+  int64 packets_in = 6;
+  int64 packets_out = 7;
+  int64 bytes_in = 8;
+  int64 bytes_out = 9;
+  int64 num_connections_started = 10;
+  int64 num_connections_completed = 11;
+  int64 num_connections_live = 12;
+}
+
+message PolicyTrace {
+  repeated PolicyHit enforced_policies = 1;
+  repeated PolicyHit pending_policies = 2;
+}
+
+message PolicyHit {
+  PolicyKind kind = 1;
+  string namespace = 2;
+  string name = 3;
+  string tier = 4;
+  Action action = 5;
+  int64 policy_index = 6;
+  int64 rule_index = 7;
+  PolicyHit trigger = 8;
+}
+
+service Statistics {
+  rpc List(StatisticsRequest) returns (stream StatisticsResult);
+}
+
+enum StatisticType {
+  PacketCount = 0;
+  ByteCount = 1;
+  LiveConnectionCount = 2;
+}
+
+enum StatisticsGroupBy {
+  Policy = 0;
+  PolicyRule = 1;
+}
+
+message StatisticsRequest {
+  int64 start_time_gte = 1;
+  int64 start_time_lt = 2;
+  StatisticType type = 3;
+  StatisticsGroupBy group_by = 4;
+  PolicyMatch policy_match = 5;
+  bool time_series = 6;
+}
+
+enum RuleDirection {
+  Any = 0;
+  Ingress = 1;
+  Egress = 2;
+}
+
+message StatisticsResult {
+  PolicyHit policy = 1;
+  RuleDirection direction = 2;
+  StatisticsGroupBy group_by = 3;
+  StatisticType type = 4;
+  repeated int64 allowed_in = 5;
+  repeated int64 allowed_out = 6;
+  repeated int64 denied_in = 7;
+  repeated int64 denied_out = 8;
+  repeated int64 passed_in = 9;
+  repeated int64 passed_out = 10;
+  repeated int64 x = 11;
+}
