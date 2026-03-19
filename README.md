@@ -1,4 +1,6 @@
-# Calico UI
+# Calico UI   
+
+![image](/docs/screenshots/main_screen.png)   
 
 Calico UI is a web UI for exploring Goldmane network flow data from Calico clusters.   
 
