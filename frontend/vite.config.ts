@@ -13,7 +13,7 @@ export default defineConfig({
       },
     },
   },
-  base: '/calico-ui/',
+  base: process.env.VITE_BASE || '/calico-ui/',
   build: {
     outDir: 'dist',
     sourcemap: false,
